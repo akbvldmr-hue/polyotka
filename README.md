@@ -1,6 +1,6 @@
 # Poletka Weather Auto Update
 
-Этот проект обновляет текст прогноза в `Полётка.html` 1 раз в день через GitHub Actions.
+Этот проект обновляет текст прогноза в `Poletka.html` 1 раз в день через GitHub Actions.
 
 ## Что обновляется
 

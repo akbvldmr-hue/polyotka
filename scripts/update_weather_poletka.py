@@ -5,6 +5,7 @@ import urllib.request
 from pathlib import Path
 
 HTML_CANDIDATES = [
+    Path("Poletka.html"),
     Path("Полётка.html"),
     Path("Полётка.html"),
 ]

@@ -1,4 +1,4 @@
-name: Update Weather in Полётка
+name: Update Weather in Poletka
 
 on:
   workflow_dispatch:
@@ -35,6 +35,6 @@ jobs:
             exit 0
           fi
 
-          git add "Полётка.html"
+          git add "Poletka.html"
           git commit -m "chore: update daily weather"
           git push

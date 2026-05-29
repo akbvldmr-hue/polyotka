@@ -4,7 +4,10 @@ import re
 import urllib.request
 from pathlib import Path
 
-HTML_PATH = Path("Полётка.html")
+HTML_CANDIDATES = [
+    Path("Полётка.html"),
+    Path("Полётка.html"),
+]
 
 API_URL = (
     "https://api.open-meteo.com/v1/forecast"
@@ -52,9 +55,26 @@ def celsius(v):
     return f"+{n}" if n > 0 else str(n)
 
 
+def resolve_html_path() -> Path:
+    for p in HTML_CANDIDATES:
+        if p.exists():
+            return p
+
+    for p in Path(".").glob("*.html"):
+        text = p.read_text(encoding="utf-8")
+        if "<!-- WEATHER_MAIN_START -->" in text and "<!-- WEATHER_SUB_START -->" in text:
+            return p
+
+    raise FileNotFoundError("Не найден HTML-файл с маркерами WEATHER_*")
+
+
 def fetch_weather():
-    with urllib.request.urlopen(API_URL, timeout=20) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(API_URL, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"WARN: не удалось получить погоду ({e}), оставляю текущий текст без изменений")
+        return None, None
 
     daily = data["daily"]
     tmax = daily["temperature_2m_max"][0]
@@ -71,22 +91,25 @@ def replace_between_markers(text: str, start: str, end: str, value: str) -> str:
     pattern = re.compile(rf"({re.escape(start)})(.*?)({re.escape(end)})", flags=re.DOTALL)
     if not pattern.search(text):
         raise RuntimeError(f"Не найдены маркеры: {start} ... {end}")
-    return pattern.sub(rf"\\1{value}\\3", text, count=1)
+    return pattern.sub(lambda m: f"{m.group(1)}{value}{m.group(3)}", text, count=1)
 
 
-def update_html(main, sub):
-    if not HTML_PATH.exists():
-        raise FileNotFoundError(f"Файл не найден: {HTML_PATH}")
-
-    text = HTML_PATH.read_text(encoding="utf-8")
+def update_html(html_path: Path, main, sub):
+    text = html_path.read_text(encoding="utf-8")
     text = replace_between_markers(text, "<!-- WEATHER_MAIN_START -->", "<!-- WEATHER_MAIN_END -->", main)
     text = replace_between_markers(text, "<!-- WEATHER_SUB_START -->", "<!-- WEATHER_SUB_END -->", sub)
-    HTML_PATH.write_text(text, encoding="utf-8")
+    html_path.write_text(text, encoding="utf-8")
 
 
 if __name__ == "__main__":
+    html_path = resolve_html_path()
     main, sub = fetch_weather()
-    update_html(main, sub)
+    if not main or not sub:
+        print("OK (no update)")
+        raise SystemExit(0)
+
+    update_html(html_path, main, sub)
     print("OK")
+    print(f"file: {html_path}")
     print(main)
     print(sub)
